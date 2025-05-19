@@ -169,8 +169,6 @@ Now, analyze the resume below:
 {resume_text}
 """
 
-<<<<<<< HEAD
-=======
 # Work Experience Analysis Prompt
 WORK_EXPERIENCE_PROMPT = """
 You are an AI-powered resume evaluation engine for an advanced ATS system. Your task is to analyze the candidate's work experience and internships, scoring them out of 100 based on multiple factors. The goal is to provide a more accurate score compared to current ATS systems, by considering both traditional factors and new-age performance metrics, skills, and broader contexts.
@@ -740,8 +738,6 @@ if uploaded_file is not None:
         st.error("⚠️ Failed to parse JSON output.")
         st.text(f"Raw Output:\n{parsed_json_text}")
         st.text(f"Error: {e}")
-<<<<<<< HEAD
-
 
 # if __name__ == "__main__":
 #     st.set_page_config(page_title="ATS Resume Evaluator")
