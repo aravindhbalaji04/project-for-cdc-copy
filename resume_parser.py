@@ -769,5 +769,3 @@ if uploaded_file is not None:
 #         st.subheader("🎯 ATS Score")
 #         st.write(f"**Final Score**: {final_score}/100")
 #         st.json(parsed)
-=======
->>>>>>> 65ceaf0bbb7a9876eb84a9123521d3c0b31d8a3a
