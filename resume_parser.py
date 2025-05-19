@@ -12,9 +12,6 @@ import tempfile
 os.environ["GOOGLE_API_KEY"] = st.secrets["GOOGLE_API_KEY"]
 genai.configure(api_key=os.environ["GOOGLE_API_KEY"])
 
-# Initialize Gemini model
-model = genai.GenerativeModel('gemini-1.5-flash')
-
 # 📝 Gemini Prompt Template
 PROMPT_TEMPLATE = """
 You are a deterministic and highly consistent resume parser and evaluator. Your job is to extract resume content in a structured JSON format and evaluate it with strict, repeatable rules — always producing the same result for the same input.
@@ -23,7 +20,7 @@ You are a deterministic and highly consistent resume parser and evaluator. Your 
 
 ### Step 1: Structured Resume Data Extraction
 
-Extract and organize the candidate's information into the following *exact JSON format*:
+Extract and organize the candidate’s information into the following *exact JSON format*:
 
 {
   "Contact Information": {
@@ -172,6 +169,8 @@ Now, analyze the resume below:
 {resume_text}
 """
 
+<<<<<<< HEAD
+=======
 # Work Experience Analysis Prompt
 WORK_EXPERIENCE_PROMPT = """
 You are an AI-powered resume evaluation engine for an advanced ATS system. Your task is to analyze the candidate's work experience and internships, scoring them out of 100 based on multiple factors. The goal is to provide a more accurate score compared to current ATS systems, by considering both traditional factors and new-age performance metrics, skills, and broader contexts.
@@ -693,6 +692,7 @@ Now analyze the following certifications:
 {certifications_section}
 """
 
+>>>>>>> 65ceaf0bbb7a9876eb84a9123521d3c0b31d8a3a
 # 📤 Extract text from PDF using PyMuPDF
 def extract_text_from_pdf(file_bytes):
     doc = fitz.open(stream=file_bytes, filetype="pdf")
@@ -708,204 +708,12 @@ def parse_resume_with_gemini(resume_text):
     clean_text = re.sub(r"^```(?:json)?|```$", "", response.text.strip(), flags=re.MULTILINE).strip()
     return clean_text
 
-# 🤖 Match resume with job description
-def match_resume_with_jd(resume_data, job_description):
-    prompt = JD_MATCHING_PROMPT.replace("{resume_data}", json.dumps(resume_data)).replace("{job_description}", job_description)
-    response = model.generate_content(
-        prompt,
-        generation_config=genai.GenerationConfig(temperature=0.0, top_p=1.0, top_k=1)
-    )
-    # Clean any code block backticks (```json or ```)
-    clean_text = re.sub(r"^```(?:json)?|```$", "", response.text.strip(), flags=re.MULTILINE).strip()
-    return clean_text
-
-# 🤖 Analyze work experience
-def analyze_work_experience(work_experience):
-    prompt = WORK_EXPERIENCE_PROMPT.replace("{work_experience}", json.dumps(work_experience))
-    response = model.generate_content(
-        prompt,
-        generation_config=genai.GenerationConfig(temperature=0.0, top_p=1.0, top_k=1)
-    )
-    # Clean any code block backticks (```json or ```)
-    clean_text = re.sub(r"^```(?:json)?|```$", "", response.text.strip(), flags=re.MULTILINE).strip()
-    return clean_text
-
-# 🤖 Analyze achievements
-def analyze_achievements(parsed_output):
-    # Extract achievements from both Projects and Work Experience
-    achievements = []
-    
-    # Add projects as achievements
-    if "Projects" in parsed_output and isinstance(parsed_output["Projects"], list):
-        for project in parsed_output["Projects"]:
-            if isinstance(project, dict):
-                achievement = {
-                    "title": project.get("title", ""),
-                    "date": project.get("date", ""),
-                    "details": project.get("details", []),
-                    "type": "project"
-                }
-                achievements.append(achievement)
-    
-    # Add work experience achievements
-    if "Work Experience" in parsed_output and isinstance(parsed_output["Work Experience"], list):
-        for exp in parsed_output["Work Experience"]:
-            if isinstance(exp, dict):
-                achievement = {
-                    "title": exp.get("role", ""),
-                    "organization": exp.get("organization", ""),
-                    "date": exp.get("date", ""),
-                    "details": exp.get("responsibilities", []),
-                    "type": "work"
-                }
-                achievements.append(achievement)
-    
-    # If no achievements found, return a default structure
-    if not achievements:
-        return json.dumps({
-            "scores": {
-                "Relevance_to_Job_Role": {"score": 0, "breakdown": {"direct_application": 0, "specialized_relevance": 0, "tailoring_bonus": 0}},
-                "Impact_and_Quantified_Results": {"score": 0, "breakdown": {"measurability": 0, "scale_of_impact": 0, "global_impact_bonus": 0}},
-                "Ownership_and_Initiative": {"score": 0, "breakdown": {"leadership_level": 0, "initiative_demonstrated": 0}},
-                "Technical_Difficulty": {"score": 0, "breakdown": {"complexity": 0, "innovation": 0, "technical_bonus": 0}},
-                "Recognition_and_Awards": {"score": 0, "breakdown": {"awards": 0, "competitions": 0, "prestige_bonus": 0}},
-                "Soft_Skills": {"score": 0, "breakdown": {"teamwork": 0, "leadership": 0, "communication": 0}},
-                "Consistency": {"score": 0, "breakdown": {"time_span": 0, "growth_evidence": 0}},
-                "Problem_Solving": {"score": 0, "breakdown": {"initiative": 0, "creativity": 0}},
-                "Domain_Value": {"score": 0, "breakdown": {"industry_relevance": 0, "domain_specific": 0}},
-                "Cross_Disciplinary": {"score": 0, "breakdown": {"multi_domain": 0, "scalability": 0}},
-                "raw_total": 0,
-                "final_score": 0
-            },
-            "detailed_analysis": {
-                "standout_achievements": ["No achievements found in the resume"],
-                "red_flags": ["No achievements found in the resume"],
-                "job_match_analysis": ["No achievements found in the resume"],
-                "technical_evidence": ["No achievements found in the resume"]
-            }
-        })
-
-    # Convert achievements to a more detailed format for analysis
-    detailed_achievements = []
-    for achievement in achievements:
-        if achievement["type"] == "project":
-            detailed_achievements.append({
-                "type": "Project Achievement",
-                "title": achievement["title"],
-                "date": achievement["date"],
-                "description": " | ".join(achievement["details"]) if isinstance(achievement["details"], list) else str(achievement["details"]),
-                "impact": "Project-based achievement",
-                "skills_demonstrated": "Technical skills and project management"
-            })
-        else:  # work experience
-            detailed_achievements.append({
-                "type": "Work Achievement",
-                "title": f"{achievement['title']} at {achievement['organization']}",
-                "date": achievement["date"],
-                "description": " | ".join(achievement["details"]) if isinstance(achievement["details"], list) else str(achievement["details"]),
-                "impact": "Professional work achievement",
-                "skills_demonstrated": "Professional skills and experience"
-            })
-
-    prompt = ACHIEVEMENTS_PROMPT.replace("{achievements_section}", json.dumps(detailed_achievements))
-    response = model.generate_content(
-        prompt,
-        generation_config=genai.GenerationConfig(temperature=0.0, top_p=1.0, top_k=1)
-    )
-    # Clean any code block backticks (```json or ```)
-    clean_text = re.sub(r"^```(?:json)?|```$", "", response.text.strip(), flags=re.MULTILINE).strip()
-    return clean_text
-
-# 🤖 Analyze certifications
-def analyze_certifications(parsed_output, job_description=""):
-    # Extract certifications from the parsed output
-    certifications = []
-    
-    # Add certifications from the Certifications section
-    if "Certifications" in parsed_output:
-        certs = parsed_output["Certifications"]
-        if isinstance(certs, list):
-            for cert in certs:
-                if isinstance(cert, str):
-                    # If it's just a string, try to parse it
-                    cert_parts = cert.split(" - ")
-                    if len(cert_parts) > 1:
-                        certifications.append({
-                            "name": cert_parts[0].strip(),
-                            "issuer": cert_parts[1].strip(),
-                            "date": "Unknown"
-                        })
-                    else:
-                        certifications.append({
-                            "name": cert.strip(),
-                            "issuer": "Unknown",
-                            "date": "Unknown"
-                        })
-                elif isinstance(cert, dict):
-                    # If it's already a dictionary, use it as is
-                    certifications.append(cert)
-    
-    # If no certifications found, return a default structure
-    if not certifications:
-        return json.dumps({
-            "scores": {
-                "Relevance_to_Job": {"score": 0, "breakdown": {"direct_match": 0, "technical_alignment": 0, "bonus": 0}},
-                "Issuer_Credibility": {"score": 0, "breakdown": {"issuer_tier": 0, "verification": 0, "bonus": 0}},
-                "Recency": {"score": 0, "breakdown": {"validity": 0, "tech_freshness": 0, "bonus": 0}},
-                "Technical_Rigor": {"score": 0, "breakdown": {"exam_format": 0, "hands_on": 0, "bonus": 0}},
-                "Specialization": {"score": 0, "breakdown": {"topic_uniqueness": 0, "diversity": 0}},
-                "Stack_Match": {"score": 0, "breakdown": {"tool_overlap": 0, "framework_match": 0}},
-                "Hiring_Value": {"score": 0, "breakdown": {"industry_recognition": 0, "hiring_influence": 0}},
-                "Progression": {"score": 0, "breakdown": {"level_growth": 0, "continuity": 0}},
-                "Project_Evidence": {"score": 0, "breakdown": {"hands_on_proof": 0, "real_world_use": 0, "bonus": 0}},
-                "Deductions": {"score": 0, "breakdown": {"redundancy": 0, "irrelevance": 0, "obsolete": 0}},
-                "raw_total": 0,
-                "final_score": 0
-            },
-            "detailed_analysis": {
-                "best_certifications": ["No certifications found in the resume"],
-                "weak_certifications": ["No certifications found in the resume"],
-                "domain_match": ["No certifications found in the resume"],
-                "improvement_suggestions": ["No certifications found in the resume"],
-                "redundancy_issues": ["No certifications found in the resume"]
-            }
-        })
-
-    # Convert certifications to a more detailed format for analysis
-    detailed_certifications = []
-    for cert in certifications:
-        detailed_cert = {
-            "name": cert.get("name", ""),
-            "issuer": cert.get("issuer", "Unknown"),
-            "date": cert.get("date", "Unknown"),
-            "credential_id": cert.get("credential_id", ""),
-            "expiry": cert.get("expiry", ""),
-            "verification_url": cert.get("verification_url", ""),
-            "description": cert.get("description", ""),
-            "skills": cert.get("skills", []),
-            "level": cert.get("level", "Unknown")
-        }
-        detailed_certifications.append(detailed_cert)
-
-    prompt = CERTIFICATION_PROMPT.replace("{certifications_section}", json.dumps(detailed_certifications)).replace("{job_description}", job_description)
-    response = model.generate_content(
-        prompt,
-        generation_config=genai.GenerationConfig(temperature=0.0, top_p=1.0, top_k=1)
-    )
-    # Clean any code block backticks (```json or ```)
-    clean_text = re.sub(r"^```(?:json)?|```$", "", response.text.strip(), flags=re.MULTILINE).strip()
-    return clean_text
 
 # 🚀 Streamlit App
 st.title("📄 ATS SCORE")
 st.markdown("Upload a resume PDF")
 
-option = st.radio("Select an option:", ["Check ATS Score Only", "Comprehensive Analysis"])
 uploaded_file = st.file_uploader("Drag and drop a resume PDF here", type=["pdf"])
-
-job_description = ""
-if option == "Comprehensive Analysis":
-    job_description = st.text_area("Enter the job description:", height=200)
 
 if uploaded_file is not None:
     with st.spinner("🔍 Extracting text from PDF..."):
@@ -916,8 +724,8 @@ if uploaded_file is not None:
         parsed_json_text = parse_resume_with_gemini(resume_text)
 
     with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_file:
-        temp_file.write(resume_bytes)
-        temp_path = temp_file.name
+      temp_file.write(resume_bytes)
+      temp_path = temp_file.name
 
     try:
         parsed_output = json.loads(parsed_json_text)
@@ -929,91 +737,38 @@ if uploaded_file is not None:
         ats_score = calculate_score(parsed_output, analyze_resume(temp_path))
         st.write(f"**Score:** {ats_score}/100")
 
-        if option == "Comprehensive Analysis":
-            st.subheader("🔍 Comprehensive Analysis")
-            
-            # Get all four scores
-            with st.spinner("🤖 Performing comprehensive analysis..."):
-                # Job Description Match Score
-                if job_description:
-                    match_result = match_resume_with_jd(parsed_output, job_description)
-                    match_data = json.loads(match_result)
-                    jd_score = match_data['scores']['final_score']
-                else:
-                    jd_score = 0
-                
-                # Work Experience Score
-                work_exp_result = analyze_work_experience(parsed_output)
-                work_exp_data = json.loads(work_exp_result)
-                work_exp_score = work_exp_data['scores']['final_score']
-                
-                # Achievements Score
-                achievements_result = analyze_achievements(parsed_output)
-                achievements_data = json.loads(achievements_result)
-                achievements_score = achievements_data['scores']['final_score']
-                
-                # Certifications Score
-                certifications_result = analyze_certifications(parsed_output, job_description)
-                certifications_data = json.loads(certifications_result)
-                certifications_score = certifications_data['scores']['final_score']
-                
-                # Calculate final score (equal weightage)
-                final_score = (jd_score + work_exp_score + achievements_score + certifications_score) / 4
-                
-                st.write(f"**Overall Comprehensive Score:** {final_score:.2f}/100")
-                
-                # Display individual scores
-                st.subheader("📊 Individual Scores")
-                st.write(f"**Job Description Match Score:** {jd_score}/100")
-                st.write(f"**Work Experience Score:** {work_exp_score}/100")
-                st.write(f"**Achievements Score:** {achievements_score}/100")
-                st.write(f"**Certifications Score:** {certifications_score}/100")
-                
-                # Display detailed breakdowns from each analysis
-                st.subheader("📝 Detailed Analysis")
-                
-                # Job Description Match Analysis
-                if job_description:
-                    st.write("### Job Description Match Analysis")
-                    st.write(f"**Overall Score:** {jd_score}/100")
-                    for category, data in match_data['scores'].items():
-                        if category not in ['raw_total', 'final_score']:
-                            st.write(f"**{category.replace('_', ' ').title()}:** {data['score']}/100")
-                
-                # Work Experience Analysis
-                st.write("### Work Experience Analysis")
-                st.write(f"**Overall Score:** {work_exp_score}/100")
-                for category, data in work_exp_data['scores'].items():
-                    if category not in ['raw_total', 'final_score']:
-                        st.write(f"**{category.replace('_', ' ').title()}:** {data['score']}/100")
-                
-                # Achievements Analysis
-                st.write("### Achievements Analysis")
-                st.write(f"**Overall Score:** {achievements_score}/100")
-                for category, data in achievements_data['scores'].items():
-                    if category not in ['raw_total', 'final_score']:
-                        st.write(f"**{category.replace('_', ' ').title()}:** {data['score']}/100")
-                
-                # Certifications Analysis
-                st.write("### Certifications Analysis")
-                st.write(f"**Overall Score:** {certifications_score}/100")
-                for category, data in certifications_data['scores'].items():
-                    if category not in ['raw_total', 'final_score']:
-                        st.write(f"**{category.replace('_', ' ').title()}:** {data['score']}/100")
-                
-                # Recommendations
-                st.subheader("💡 Recommendations")
-                st.write("**Strengths:**")
-                for strength in work_exp_data['detailed_analysis']['strengths']:
-                    st.write(f"- {strength}")
-                st.write("**Areas for Improvement:**")
-                for area in work_exp_data['detailed_analysis']['areas_for_improvement']:
-                    st.write(f"- {area}")
-                st.write("**Action Items:**")
-                for rec in work_exp_data['detailed_analysis']['recommendations']:
-                    st.write(f"- {rec}")
-
     except Exception as e:
         st.error("⚠️ Failed to parse JSON output.")
         st.text(f"Raw Output:\n{parsed_json_text}")
         st.text(f"Error: {e}")
+<<<<<<< HEAD
+
+
+# if __name__ == "__main__":
+#     st.set_page_config(page_title="ATS Resume Evaluator")
+#     st.title("📄 AI Resume Evaluator")
+#     uploaded_file = st.file_uploader("Upload your resume (PDF only)", type="pdf")
+
+#     if uploaded_file:
+#         with tempfile.NamedTemporaryFile(delete=False) as tmp:
+#             tmp.write(uploaded_file.read())
+#             tmp_path = tmp.name
+
+#         with fitz.open(tmp_path) as doc:
+#             text = ""
+#             for page in doc:
+#                 text += page.get_text()
+
+#         # Call Gemini parser
+#         model = genai.GenerativeModel('gemini-1.5-flash')
+#         parsed = model.generate_content(PROMPT_TEMPLATE + text).text
+
+#         # Parse & score
+#         format_score = analyze_resume(text)
+#         final_score = calculate_score(parsed, format_score)
+
+#         st.subheader("🎯 ATS Score")
+#         st.write(f"**Final Score**: {final_score}/100")
+#         st.json(parsed)
+=======
+>>>>>>> 65ceaf0bbb7a9876eb84a9123521d3c0b31d8a3a
