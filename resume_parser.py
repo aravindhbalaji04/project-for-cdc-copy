@@ -692,7 +692,6 @@ Now analyze the following certifications:
 {certifications_section}
 """
 
->>>>>>> 65ceaf0bbb7a9876eb84a9123521d3c0b31d8a3a
 # 📤 Extract text from PDF using PyMuPDF
 def extract_text_from_pdf(file_bytes):
     doc = fitz.open(stream=file_bytes, filetype="pdf")
